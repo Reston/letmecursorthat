@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Let me Cursor that for you</title>
+  <meta name="description" content="LMGTFY-style meme page for Cursor: craft a link that auto-types a prompt or project-wide search." />
+  <style>
+    :root{
+      --bg: #0a0a0a; /* neutral-950 */
+      --panel: #171717; /* neutral-900 */
+      --panel-border: #262626; /* neutral-800 */
+      --text: #e5e5e5; /* neutral-200 */
+      --muted: #a3a3a3; /* neutral-400 */
+      --cyan: #22d3ee; /* cyan-400 */
+      --cyan-ghost: rgba(34, 211, 238, .2);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+    .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .container{width:100%;max-width:900px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+    h1{font-size:28px;margin:0;font-weight:800;letter-spacing:-.01em}
+    .cyan{color:var(--cyan)}
+    a.link{color:inherit;opacity:.8;text-decoration:underline;text-underline-offset:4px}
+    a.link:hover{opacity:1}
+
+    .panel{background:color-mix(in srgb, var(--panel) 90%, transparent);border:1px solid var(--panel-border);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .pad{padding:20px}
+
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media (min-width:720px){.grid{grid-template-columns:4fr 1fr}}
+
+    label{font-size:12px;color:var(--muted)}
+    input,select,button{font:inherit}
+    input,select{width:100%;margin-top:6px;background:#1f1f1f;border:1px solid var(--panel-border);color:var(--text);padding:10px 12px;border-radius:12px;outline:none}
+    input:focus,select:focus{border-color:#3dd5ec;box-shadow:0 0 0 2px rgba(61,213,236,.25)}
+
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid var(--panel-border);background:#1f1f1f;color:var(--text);cursor:pointer}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+    .btn-primary{background:var(--cyan);color:#061013;border:none;font-weight:600}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+
+    .badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:var(--cyan-ghost);color:#7ee7f9}
+    .icon{font-size:14px}
+
+    .card{margin-top:18px}
+    .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .title-small{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af}
+    .title{font-weight:700}
+
+    ol.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+    .step{display:flex;gap:12px;opacity:.3}
+    .step.active{opacity:1}
+    .step .text{font-weight:600}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+    .box{margin-top:8px;background:#1f1f1f;border:1px solid var(--panel-border);border-radius:12px;padding:8px 10px}
+    .placeholder{opacity:.7}
+
+    .footer{margin-top:16px;color:#a1a1aa;font-size:12px}
+    .list{margin:6px 0 0 18px}
+
+    @keyframes blink{50%{opacity:0}}
+    .caret{display:inline-block;width:8px;margin-left:2px;animation:blink 1s steps(1,end) infinite}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="container">
+      <header>
+        <h1>Let me <span class="cyan">Cursor</span> that for you</h1>
+        <a class="link" href="https://www.cursor.com/" target="_blank" rel="noreferrer">What is Cursor?</a>
+      </header>
+
+      <!-- Builder -->
+      <div id="builder" class="panel pad">
+        <div class="grid">
+          <div>
+            <label>Prompt / Search query</label>
+            <input id="q" placeholder="e.g. Refactor the fetch logic to use React Query" />
+          </div>
+          <div>
+            <label>Mode</label>
+            <select id="mode">
+              <option value="ask">Ask AI</option>
+              <option value="search">Search project</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button id="play" class="btn btn-primary"><span class="icon">▶️</span> Play animation</button>
+          <button id="copy" class="btn"><span class="icon">🔗</span> <span id="copyLabel">Copy share link</span></button>
+        </div>
+        <p class="footer">Tip: Send the link to someone who keeps asking for things you can do with Cursor 😉</p>
+      </div>
+
+      <!-- Animation Card -->
+      <div class="panel pad card">
+        <div class="card-head">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="badge" id="headerIcon">✨</span>
+            <div>
+              <div class="title-small">Tutorial</div>
+              <div class="title" id="tutorialTitle">Ask Cursor to do it</div>
+            </div>
+          </div>
+          <div class="btn-row" style="margin-top:0">
+            <button id="new" class="btn"><span class="icon">🪄</span> New</button>
+            <button id="replay" class="btn"><span class="icon">🔄</span> Replay</button>
+            <button id="share" class="btn"><span class="icon">📋</span> Share</button>
+          </div>
+        </div>
+        <ol id="steps" class="steps"></ol>
+        <div id="emptyHint" class="footer" style="display:none">Add a prompt or query above, then hit <b>Play</b> — or craft a share link.</div>
+      </div>
+
+      <footer class="footer">
+        <div>Taglines you can use:</div>
+        <ul class="list">
+          <li>“Let me <span class="cyan">Cursor</span> that for you.”</li>
+          <li>“Have you tried asking <span class="cyan">Cursor</span>?”</li>
+          <li>“Type. Sparkle. Ship.”</li>
+          <li>“Search, don’t suffer.”</li>
+        </ul>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const $ = (s, el=document) => el.querySelector(s);
+      const stepsEl = $('#steps');
+      const builderEl = $('#builder');
+      const qInput = $('#q');
+      const modeSel = $('#mode');
+      const playBtn = $('#play');
+      const copyBtn = $('#copy');
+      const copyLabel = $('#copyLabel');
+      const newBtn = $('#new');
+      const replayBtn = $('#replay');
+      const shareBtn = $('#share');
+      const headerIcon = $('#headerIcon');
+      const tutorialTitle = $('#tutorialTitle');
+      const emptyHint = $('#emptyHint');
+
+      const params = new URLSearchParams(location.search);
+      let q = params.get('q') || '';
+      let mode = (params.get('mode') || 'ask').toLowerCase();
+      if (mode !== 'search') mode = 'ask';
+      let isPlaying = !!q;
+      let step = 0;
+      let typed = '';
+      let typingInterval = null;
+      let nextStepTimeout = null;
+
+      document.title = 'Let me Cursor that for you';
+
+      function getSteps(){
+        const common = [ 'Open Cursor (AI code editor).' ];
+        if (mode === 'ask'){
+          return [
+            ...common,
+            'Open the AI chat (sparkle icon or your shortcut).',
+            'Type your prompt:',
+            'Press Enter and let Cursor work its magic.',
+            'Review, iterate, ship ✨'
+          ];
+        }
+        return [
+          ...common,
+          'Open project-wide search (⌘/Ctrl + ⇧ + F).',
+          'Type your query:',
+          'Press Enter to scan the workspace.',
+          'Jump to results and fix things fast.'
+        ];
+      }
+
+      function clearTimers(){
+        if (typingInterval) { clearInterval(typingInterval); typingInterval = null; }
+        if (nextStepTimeout) { clearTimeout(nextStepTimeout); nextStepTimeout = null; }
+      }
+
+      function makeShareUrl(){
+        const url = new URL(location.href);
+        url.searchParams.set('q', q);
+        url.searchParams.set('mode', mode);
+        return url.toString();
+      }
+
+      async function copyLink(){
+        const link = makeShareUrl();
+        try{
+          await navigator.clipboard.writeText(link);
+          copyLabel.textContent = 'Copied!';
+          setTimeout(()=> copyLabel.textContent = 'Copy share link', 1200);
+        }catch(e){
+          window.prompt('Copy this link:', link);
+        }
+      }
+
+      function iconFor(idx){
+        // Step 0 is a wand, others use ✨ for ask, 🔎 for search
+        if (idx === 0) return '🪄';
+        return mode === 'ask' ? '✨' : '🔎';
+      }
+
+      function render(){
+        // Builder visibility
+        builderEl.style.display = isPlaying ? 'none' : 'block';
+        emptyHint.style.display = q ? 'none' : 'block';
+
+        // Inputs
+        qInput.value = q;
+        modeSel.value = mode;
+        playBtn.disabled = !q;
+        copyBtn.disabled = !q;
+
+        // Header icon/title
+        headerIcon.textContent = mode === 'ask' ? '✨' : '🔎';
+        tutorialTitle.textContent = mode === 'ask' ? 'Ask Cursor to do it' : 'Search your project like a pro';
+
+        // Steps list
+        stepsEl.innerHTML = '';
+        const steps = getSteps();
+        steps.forEach((text, idx)=>{
+          const li = document.createElement('li');
+          li.className = 'step' + (idx <= step ? ' active' : '');
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = iconFor(idx);
+          const right = document.createElement('div');
+          right.style.flex = '1';
+          const title = document.createElement('div');
+          title.className = 'text';
+          title.textContent = text;
+          right.appendChild(title);
+
+        
+          const typingStep = (mode === 'ask' && idx === 2) || (mode === 'search' && idx === 2);
+          if (typingStep){
+            const box = document.createElement('div');
+            box.className = 'box mono';
+            if (isPlaying){
+              box.innerHTML = `<span id="typed">${typed.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span><span class="caret">▍</span>`;
+            } else {
+              const hint = mode === 'ask' ? 'Your prompt…' : 'Your search…';
+              box.innerHTML = `<span class="placeholder">${q || hint}</span>`;
+            }
+            right.appendChild(box);
+          }
+
+          li.appendChild(badge);
+          li.appendChild(right);
+          stepsEl.appendChild(li);
+        });
+      }
+
+      function reset(){
+        clearTimers();
+        isPlaying = false;
+        step = 0;
+        typed = '';
+        render();
+      }
+
+      function startOver(){
+        clearTimers();
+        isPlaying = false;
+        step = 0;
+        typed = '';
+        q = '';
+        mode = 'ask';
+        const url = new URL(location.href);
+        url.search = '';
+        history.replaceState({}, '', url.toString());
+        render();
+      }
+
+      function play(){
+        reset();
+        isPlaying = true;
+        render();
+        tick();
+      }
+
+      function tick(){
+        if (!isPlaying) return;
+        const steps = getSteps();
+        const last = steps.length - 1;
+        const isTyping = (mode === 'ask' && step === 2) || (mode === 'search' && step === 2);
+        if (isTyping){
+          typed = '';
+          const safe = String(q ?? '');
+          let i = 0;
+          render();
+          typingInterval = setInterval(()=>{
+            i += 1;
+            typed = safe.slice(0, i);
+            const span = document.getElementById('typed');
+            if (span) span.textContent = typed;
+            if (i >= safe.length){
+              clearInterval(typingInterval); typingInterval = null;
+              nextStepTimeout = setTimeout(()=>{ step = Math.min(step+1, last); render(); tick(); }, 800);
+            }
+          }, Math.max(20, 120 - Math.min(safe.length, 80)));
+          return;
+        }
+        
+        nextStepTimeout = setTimeout(()=>{
+          step = Math.min(step+1, last);
+          render();
+          if (step < last) tick();
+        }, step === 0 ? 900 : 1100);
+      }
+
+      
+      qInput.addEventListener('input', e=>{ q = e.target.value; render(); });
+      modeSel.addEventListener('change', e=>{ mode = e.target.value === 'search' ? 'search' : 'ask'; render(); });
+      playBtn.addEventListener('click', ()=>{ if (q) play(); });
+      copyBtn.addEventListener('click', copyLink);
+      shareBtn.addEventListener('click', copyLink);
+      replayBtn.addEventListener('click', ()=>{ play(); });
+      newBtn.addEventListener('click', startOver);
+
+      
+      render();
+      if (q) play();
+    })();
+  </script>
+</body>
+</html>
